@@ -1,0 +1,26 @@
+---
+- name: Install Postgres
+  hosts: all
+  become: true
+  tasks:
+  # Добавим ключ репозитория для последующей работы с ним
+  - name: Add APT key
+    apt_key: url=https://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+  # Подключаем репозиторий с пакетами postgres
+  - name: Add APT repository
+    apt_repository:
+      repo: 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main'
+      state: present
+
+  # Выполним установку пакета
+  - name: Install postgres package
+    apt:
+      name: postgresql-10
+      state: present
+
+  # Включаем сервис
+  - name: Configure service supervisor
+    systemd:
+      name: postgresql
+      enabled: yes

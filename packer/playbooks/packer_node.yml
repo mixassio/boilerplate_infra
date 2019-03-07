@@ -1,0 +1,11 @@
+---
+- name: Install Node && NPM
+  hosts: all
+  become: true
+  tasks:
+  # Установим в цикле все зависимости
+  - name: Install node and npm and required packages
+    apt: "name={{ item }} state=present"
+    with_items:
+      - nodejs
+      - npm

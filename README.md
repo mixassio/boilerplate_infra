@@ -22,8 +22,8 @@ ___________
 ## ChatOps
 ___________
 ## Packer
-
-### Базовый образ
+В дирректории `packer` есть примеры-шаблоны packer-image с использованием скриптов и ансибл.
+### Базовый образ должен содержать:
 - Настройки ОС
 - Пакеты, с низкой частотой изменения
 - Логи, мониторинг, агенты систем управления конфигурацией
@@ -74,6 +74,114 @@ packer build packer_example.json
 ```
 ___________
 ## Terraform
+### Пример конфигурационного файла main.tf
+```
+provider "google" {
+  project     = "infra-14367"
+  region      = "europe-west1"
+}
+resource "google_compute_instance" "app" {
+name = "reddit-app" machine_type = "g1-small"
+zone = "europe-west1-b" # определение загрузочного диска boot_disk {
+    initialize_params { image = "reddit-base" }
+  }
+  network_interface {
+    network = "default"
+    access_config {}
+} }
+```
+### Providers
+- Содержат настройки аутентификации и подключения к платформе или сервису
+- Предоставляют набор ресурсов для управления
+- Могут использоваться в модулях (начиная с версии 0.10.0) - Поддержка большого количества сервисов с API: AWS, Google Cloud, GitHub, PowerDNS, VCloud etc.
+
+Установка провайдера производится командой `terraform init`
+
+[list preferences all providers](https://www.terraform.io/docs/providers/index.html)
+
+### Resources
+- Определяются типом провайдера
+- Позволяют управлять компонентами платформы или сервиса 
+- Могут иметь обязательные и необязательные аргументы Могут ссылаться на другие ресурсы
+- Комбинация тип ресурса + имя уникально идентифицирует ресурс в рамках данной конфигурации
+
+### Основные команды
+- Для приведения системы в целевое состояние используется команда `terraform -auto-approve=true apply` - идемпотентна!
+- Для просмотра, какие изменения будут применены `terraform plan`
+- Для обновления конфигурации `terraform refresh`
+- Для просмотра выходных переменных `terraform output`
+- Для пересоздания ресурса `terraform taint google_compute_instance.app`
+
+### Базовая организация конфигурационных файлов
+- `main.tf` - основная конфигурация
+- `variables.tf` - объявляение input-переменных 
+- `outputs.tf` - определение - выходных переменных
+- `terraform.tfvars.example` - пример файла - `terraform.tfvars`
+
+### State файлы
+- Terraform хранит информацию об управляемых ресурсах в файле terraform.tfstate
+- Файл terraform.tfstate обновляется при каждом запуске apply или refresh
+- Файл terraform.tfstate.backup используется для бекапа предыдущего terraform.state
+- По умолчанию сохраняются локально в папке с конфигурацией
+
+### Input-переменные
+- Позволяют параметризировать конфигурационные файлы Три типа:
+  - string
+  - map
+  - list
+  - boolean
+- Можно передать из файла, из окружения, из командной строки или интерактивно.
+
+Входные переменные описываются в файле variables.tf:
+```
+variable project {
+  description = "Project ID"
+}
+variable region {
+  description = "Region"
+  default = "europe-west1"
+}
+```
+Пример использования переменных в main.tf:
+```
+provider "google" {
+  project = "${var.project}"
+  region  = "${var.region}"
+}
+```
+Задание переменных через файл
+- Укажем переменные в файле my-vars.tfvars:
+```
+project = "infra-179015"
+public_key_path = "~/.ssh/appuser.pub"
+```
+- Указываем путь до файла при запуске команд terraform:
+```
+$ terraform apply -var-file=my-vars.tfvars
+```
+- Если файл называется terraform.tfvars, то переменные загружаются автоматически.
+
+### Поиск по state-файлу
+```
+$ terraform show
+$ terraform state show google_compute_firewall.firewall_puma
+$ terraform show | grep assigned_nat_ip
+```
+### Output-переменные
+- Позволяют сохранить выходные значения после создания ресурсов.
+- Облегчают процедуру поиска нужных данных
+- Используются в модулях как входные переменные для других модулей
+
+`outputs.tf`
+```
+output "app_external-ip {
+  value="${google_compute_instance.app.network_interface.0.access_config.0.assigned_nat_ip}"
+}
+// просмотр
+$ terraform output
+app_external_ip = 104.199.54.241
+```
+
 ___________
 ## Docker
 ___________
